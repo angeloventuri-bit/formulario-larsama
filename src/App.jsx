@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { supabase } from "./supabase";
 
 const ADMIN_PASS = "imperio2026";
+const SHEETS_URL = "https://script.google.com/macros/s/AKfycbwojwat-VUHRfpoHpT3MRLfpjwsZ7SYECadgBDF8jKABg3gCta0bNv-De8srQfmsNYK/exec";
 
 const SECTIONS = [
   {
@@ -329,12 +329,14 @@ function FormView({ nome, cargo, onDone, onBack }) {
   const submit = async () => {
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("respostas_larsama").insert({
-        nome_completo: nome.trim(),
-        cargo: cargo.trim() || null,
-        respostas: data,
+      await fetch(SHEETS_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          nome_completo: nome.trim(),
+          cargo: cargo.trim() || "",
+          respostas: data,
+        }),
       });
-      if (error) console.error("Supabase insert error:", error);
     } catch (e) { console.error(e); }
     setSubmitting(false);
     onDone();
@@ -556,12 +558,9 @@ function AdminView({ onBack }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("respostas_larsama")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) { console.error(error); setResponses([]); }
-      else setResponses(data || []);
+      const res = await fetch(SHEETS_URL);
+      const data = await res.json();
+      setResponses(Array.isArray(data) ? data : []);
     } catch { setResponses([]); }
     setLoading(false);
   }, []);
@@ -570,8 +569,7 @@ function AdminView({ onBack }) {
 
   const deleteResp = async (id) => {
     try {
-      const { error } = await supabase.from("respostas_larsama").delete().eq("id", id);
-      if (error) console.error(error);
+      await fetch(`${SHEETS_URL}?action=delete&id=${encodeURIComponent(id)}`);
     } catch { /* noop */ }
     load();
   };
