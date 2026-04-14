@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "./supabase";
 
 const ADMIN_PASS = "imperio2026";
 
@@ -86,19 +87,6 @@ const SECTIONS = [
 ];
 
 const ALL_Q = SECTIONS.flatMap(s => s.questions);
-
-/* ---- localStorage helpers (replaces window.storage) ---- */
-const storage = {
-  get(key) {
-    try { return localStorage.getItem(key); } catch { return null; }
-  },
-  set(key, value) {
-    try { localStorage.setItem(key, value); } catch { /* quota exceeded */ }
-  },
-  remove(key) {
-    try { localStorage.removeItem(key); } catch { /* noop */ }
-  },
-};
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');
@@ -338,16 +326,15 @@ function FormView({ nome, cargo, onDone, onBack }) {
   const filledTotal = ALL_Q.filter(q => { const v = data[q.id]; return Array.isArray(v) ? v.length > 0 : v && v.trim?.(); }).length;
   const pct = Math.round((filledTotal / ALL_Q.length) * 100);
 
-  const submit = () => {
+  const submit = async () => {
     setSubmitting(true);
-    const entry = { nomeCompleto: nome.trim(), cargo: cargo.trim(), respostas: data, dataEnvio: new Date().toISOString() };
-    const id = "resp_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
     try {
-      storage.set(id, JSON.stringify(entry));
-      let keys = [];
-      try { const idx = storage.get("resp_index"); if (idx) keys = JSON.parse(idx); } catch { /* noop */ }
-      keys.push(id);
-      storage.set("resp_index", JSON.stringify(keys));
+      const { error } = await supabase.from("respostas_larsama").insert({
+        nome_completo: nome.trim(),
+        cargo: cargo.trim() || null,
+        respostas: data,
+      });
+      if (error) console.error("Supabase insert error:", error);
     } catch (e) { console.error(e); }
     setSubmitting(false);
     onDone();
@@ -566,32 +553,25 @@ function AdminView({ onBack }) {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     setLoading(true);
-    const resps = [];
     try {
-      const idx = storage.get("resp_index");
-      if (idx) {
-        const keys = JSON.parse(idx);
-        for (const k of keys) {
-          try { const r = storage.get(k); if (r) resps.push({ key: k, ...JSON.parse(r) }); } catch { /* noop */ }
-        }
-      }
-    } catch { /* noop */ }
-    setResponses(resps);
+      const { data, error } = await supabase
+        .from("respostas_larsama")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) { console.error(error); setResponses([]); }
+      else setResponses(data || []);
+    } catch { setResponses([]); }
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const deleteResp = (key) => {
-    storage.remove(key);
+  const deleteResp = async (id) => {
     try {
-      const idx = storage.get("resp_index");
-      if (idx) {
-        const keys = JSON.parse(idx).filter(k => k !== key);
-        storage.set("resp_index", JSON.stringify(keys));
-      }
+      const { error } = await supabase.from("respostas_larsama").delete().eq("id", id);
+      if (error) console.error(error);
     } catch { /* noop */ }
     load();
   };
@@ -602,7 +582,7 @@ function AdminView({ onBack }) {
     const header = ["Nome Completo", "Cargo", "Data de Envio", ...qLabels];
     const rows = responses.map(r => {
       const d = r.respostas || {};
-      return [r.nomeCompleto || r.nome, r.cargo, new Date(r.dataEnvio).toLocaleString("pt-BR"),
+      return [r.nome_completo, r.cargo, new Date(r.created_at).toLocaleString("pt-BR"),
         ...qIds.map(id => { const v = d[id]; return Array.isArray(v) ? v.join("; ") : v || ""; })];
     });
     const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -647,16 +627,16 @@ function AdminView({ onBack }) {
               const isOpen = expanded === i;
               const answered = Object.keys(r.respostas || {}).filter(k => { const v = r.respostas[k]; return Array.isArray(v) ? v.length : v?.trim?.(); }).length;
               return (
-                <div key={r.key} className="admin-card fade-up" style={{ animationDelay: `${i * 80}ms` }}>
+                <div key={r.id} className="admin-card fade-up" style={{ animationDelay: `${i * 80}ms` }}>
                   <div onClick={() => setExpanded(isOpen ? null : i)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", cursor: "pointer" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                       <div style={{ width: 44, height: 44, borderRadius: 22, background: "var(--forest)", color: "var(--white)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--serif)", fontSize: 18, fontWeight: 700, flexShrink: 0 }}>
-                        {(r.nomeCompleto || r.nome || "?").charAt(0).toUpperCase()}
+                        {(r.nome_completo || "?").charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: 15 }}>{r.nomeCompleto || r.nome}</div>
+                        <div style={{ fontWeight: 600, fontSize: 15 }}>{r.nome_completo}</div>
                         <div style={{ color: "var(--muted)", fontSize: 13 }}>
-                          {r.cargo && <>{r.cargo} · </>}{new Date(r.dataEnvio).toLocaleString("pt-BR")}
+                          {r.cargo && <>{r.cargo} · </>}{new Date(r.created_at).toLocaleString("pt-BR")}
                         </div>
                       </div>
                     </div>
@@ -691,7 +671,7 @@ function AdminView({ onBack }) {
                         );
                       })}
                       <div style={{ marginTop: 20, textAlign: "right" }}>
-                        <button onClick={e => { e.stopPropagation(); if (window.confirm("Excluir esta resposta permanentemente?")) deleteResp(r.key); }}
+                        <button onClick={e => { e.stopPropagation(); if (window.confirm("Excluir esta resposta permanentemente?")) deleteResp(r.id); }}
                           style={{ background: "none", border: "1px solid var(--danger)", color: "var(--danger)", padding: "8px 20px", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "var(--sans)", fontWeight: 500, transition: "all .2s" }}>
                           Excluir resposta
                         </button>
