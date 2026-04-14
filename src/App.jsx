@@ -34,7 +34,7 @@ const SECTIONS = [
   },
   {
     id: "dobras", icon: "\u25c7", title: "Conte\u00fado", subtitle: "por Se\u00e7\u00e3o do Site",
-    desc: "Para cada \u2018dobra\u2019 da p\u00e1gina, o Imp\u00e9rio apresentar\u00e1 3 op\u00e7\u00f5es visuais.",
+    desc: "Para cada \u2018dobra\u2019 da p\u00e1gina, a Impero apresentar\u00e1 3 op\u00e7\u00f5es visuais.",
     questions: [
       { id: "q10", label: "HERO \u2014 O que o visitante deve ver primeiro ao entrar no site?", type: "long", hint: "Imagem marcante, v\u00eddeo, frase de impacto, bot\u00e3o de doa\u00e7\u00e3o\u2026" },
       { id: "q11", label: "QUEM SOMOS \u2014 Quais pontos da hist\u00f3ria merecem destaque?", type: "long", hint: "Funda\u00e7\u00e3o, marcos, v\u00ednculo CDU, Sama\u00fama\u2026" },
@@ -243,7 +243,7 @@ function WelcomeView({ onStart, onAdmin }) {
 
       <div className="fade-up" style={{ maxWidth: 520, position: "relative", zIndex: 1 }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 20px", background: "var(--gold-pale)", borderRadius: 24, marginBottom: 28 }}>
-          <span style={{ color: "var(--gold)", fontSize: 13, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase" }}>{"Parceria Imp\u00e9rio \u00d7 Larsama"}</span>
+          <span style={{ color: "var(--gold)", fontSize: 13, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase" }}>{"Parceria Impero \u00d7 Lar Sama"}</span>
         </div>
 
         <h1 style={{ fontFamily: "var(--serif)", fontSize: 48, fontWeight: 700, color: "var(--forest)", lineHeight: 1.15, marginBottom: 12 }}>
