@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
-const ADMIN_PASS = "imperio2026";
+const ADMIN_PASS = "impero2026";
 const SHEETS_URL = "https://script.google.com/macros/s/AKfycbwojwat-VUHRfpoHpT3MRLfpjwsZ7SYECadgBDF8jKABg3gCta0bNv-De8srQfmsNYK/exec";
 
 const SECTIONS = [
